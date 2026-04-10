@@ -248,22 +248,7 @@
   .legend { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
   .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
   .legend-sq { width: 12px; height: 12px; border-radius: 3px; }
-  .print-btn {
-    display: flex; align-items: center; gap: 6px;
-    padding: 9px 18px; border-radius: var(--radius);
-    background: var(--navy); color: #fff;
-    border: none; font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 13px; font-weight: 600; cursor: pointer;
-    transition: background .15s;
-  }
-  .print-btn:hover { background: var(--blue); }
 
-  @media print {
-    .print-btn { display: none; }
-    .phases-scroll { max-height: none; overflow: visible; }
-    .gantt-panel { position: static; }
-    body { background: white; }
-  }
 </style>
 </head>
 <body>
@@ -330,7 +315,7 @@
     <div class="legend-item"><span class="legend-sq" style="background:#0d9488"></span>Operasional</div>
     <div class="legend-item"><span class="legend-sq" style="background:#7c3aed"></span>Dokumentasi</div>
   </div>
-  <button class="print-btn" onclick="window.print()">🖨️ Print / Simpan PDF</button>
+  <span style="font-size:12px;color:#94a3b8;">✓ Pengaturan tersimpan otomatis</span>
 </div>
 
 <script>
@@ -603,14 +588,45 @@ function updateSummary() {
   document.getElementById('hEndDate').textContent = fmtFull(endD);
 }
 
+function saveState() {
+  const base = document.getElementById('startDate').value || todayStr();
+  const state = {
+    startDate: base,
+    phases: PHASES.map(p => ({ id: p.id, days: p.days, startOffset: p.startOffset }))
+  };
+  localStorage.setItem('gudang_timeline', JSON.stringify(state));
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('gudang_timeline');
+    if (!raw) return;
+    const state = JSON.parse(raw);
+    if (state.startDate) {
+      document.getElementById('startDate').value = state.startDate;
+    }
+    if (state.phases) {
+      state.phases.forEach(saved => {
+        const p = PHASES.find(x => x.id === saved.id);
+        if (p) {
+          p.days = saved.days;
+          p.startOffset = saved.startOffset;
+        }
+      });
+    }
+  } catch(e) {}
+}
+
 function updateAll() {
   renderCards();
   renderGantt();
   updateSummary();
+  saveState();
 }
 
 document.getElementById('startDate').addEventListener('change', updateAll);
 window.addEventListener('resize', renderGantt);
+loadState();
 updateAll();
 </script>
 </body>

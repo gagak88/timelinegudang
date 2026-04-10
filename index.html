@@ -229,60 +229,10 @@
   /* ── GANTT PANEL ── */
   .gantt-panel { position: sticky; top: 24px; }
   .gantt-scroll { overflow-x: auto; }
-  .gantt-table { min-width: 500px; width: 100%; border-collapse: collapse; }
-  .gantt-head-row { background: var(--surface2); }
-  .gantt-head-row th {
-    padding: 10px 14px;
-    font-size: 11px; font-weight: 600;
-    color: var(--text2); text-align: left;
-    border-bottom: 1px solid var(--border);
-  }
-  .gantt-head-row th.track-head {
-    text-align: center; font-size: 10px; color: var(--text3);
-    padding: 10px 4px;
-  }
-  .gantt-body tr { border-bottom: 1px solid var(--border); }
-  .gantt-body tr:last-child { border-bottom: none; }
-  .gantt-body tr:hover { background: var(--surface); }
-  .g-name { padding: 10px 14px; min-width: 140px; }
-  .g-name-txt { font-size: 12px; font-weight: 600; color: var(--text); }
-  .g-name-date { font-size: 10px; color: var(--text3); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
-  .g-dur { padding: 10px 14px; white-space: nowrap; }
-  .dur-badge {
-    display: inline-flex; align-items: center;
-    font-size: 11px; font-weight: 600;
-    padding: 3px 8px; border-radius: 5px;
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .g-track { padding: 8px 8px; }
-  .track-bg { position: relative; height: 28px; border-radius: 6px; background: var(--surface2); }
-  .track-bar {
-    position: absolute; top: 4px; height: 20px;
-    border-radius: 5px; display: flex; align-items: center;
-    padding: 0 8px; min-width: 24px;
-    transition: width .3s ease, left .3s ease;
-  }
-  .track-bar-txt { font-size: 10px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* ── DATE AXIS ── */
-  .gantt-axis {
-    display: flex; padding: 0 8px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface2);
-  }
-  .gantt-axis-spacer { min-width: 140px; padding: 6px 14px; flex-shrink: 0; }
-  .gantt-axis-spacer2 { min-width: 80px; padding: 6px 14px; flex-shrink: 0; }
-  .gantt-axis-track { flex: 1; position: relative; height: 30px; }
-  .axis-tick {
-    position: absolute; font-size: 10px;
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--text3); transform: translateX(-50%);
-    top: 8px;
-  }
-  .axis-line {
-    position: absolute; top: 0; bottom: 0;
-    border-left: 1px dashed var(--border2);
-  }
+
+  /* ── SVG GANTT ── */
+  #ganttSvg { display: block; width: 100%; font-family: 'Plus Jakarta Sans', sans-serif; }
 
   /* ── LEGEND & FOOTER ── */
   .bottom-row {
@@ -363,22 +313,8 @@
       <div class="panel-head-icon">📊</div>
       <h2>Gantt chart</h2>
     </div>
-    <div class="gantt-scroll">
-      <div class="gantt-axis" id="ganttAxis">
-        <div class="gantt-axis-spacer"></div>
-        <div class="gantt-axis-spacer2"></div>
-        <div class="gantt-axis-track" id="axisTrack"></div>
-      </div>
-      <table class="gantt-table">
-        <thead>
-          <tr class="gantt-head-row">
-            <th style="min-width:140px;">Fase pekerjaan</th>
-            <th style="min-width:70px;">Durasi</th>
-            <th class="track-head">Timeline</th>
-          </tr>
-        </thead>
-        <tbody class="gantt-body" id="ganttRows"></tbody>
-      </table>
+    <div style="overflow-x:auto;">
+      <svg id="ganttSvg"></svg>
     </div>
   </div>
 </div>
@@ -517,53 +453,131 @@ function renderCards() {
 function renderGantt() {
   const base = document.getElementById('startDate').value || todayStr();
   const totalDays = getSpan();
+  const svg = document.getElementById('ganttSvg');
 
-  // Axis ticks
-  const axisTrack = document.getElementById('axisTrack');
-  axisTrack.innerHTML = '';
-  axisTrack.style.position = 'relative';
-  axisTrack.style.height = '30px';
-  const step = Math.max(1, Math.ceil(totalDays / 7));
-  for (let i = 0; i <= totalDays; i += step) {
-    const pct = (i / totalDays) * 100;
-    const line = document.createElement('div');
-    line.className = 'axis-line';
-    line.style.left = pct + '%';
-    axisTrack.appendChild(line);
-    const lbl = document.createElement('div');
-    lbl.className = 'axis-tick';
-    lbl.style.left = pct + '%';
-    lbl.textContent = fmtShort(addDays(base, Math.min(i, totalDays - 1)));
-    axisTrack.appendChild(lbl);
+  // Layout constants
+  const COL_NAME = 160;   // px: fase label column
+  const COL_DUR  = 64;    // px: durasi column
+  const TRACK_W  = 480;   // px: timeline track width (fixed, scroll if needed)
+  const ROW_H    = 48;    // px per row
+  const HEAD_H   = 36;    // px header row
+  const AXIS_H   = 30;    // px date axis row
+  const PAD_V    = 10;    // vertical padding inside bar
+  const BAR_H    = 22;
+  const BAR_Y_OFF = (ROW_H - BAR_H) / 2;
+  const TOTAL_W  = COL_NAME + COL_DUR + TRACK_W;
+  const TOTAL_H  = AXIS_H + HEAD_H + ROW_H * PHASES.length + 1;
+
+  svg.setAttribute('viewBox', `0 0 ${TOTAL_W} ${TOTAL_H}`);
+  svg.setAttribute('width', TOTAL_W);
+  svg.setAttribute('height', TOTAL_H);
+  svg.style.minWidth = TOTAL_W + 'px';
+
+  // Helper: x position for a day offset within TRACK area
+  const dayToX = (offset) => COL_NAME + COL_DUR + (offset / totalDays) * TRACK_W;
+
+  let html = '';
+
+  // ── DEFS ──
+  html += `<defs>
+    <clipPath id="barClip"><rect x="${COL_NAME+COL_DUR}" y="0" width="${TRACK_W}" height="${TOTAL_H}"/></clipPath>
+  </defs>`;
+
+  // ── BACKGROUNDS ──
+  // Full bg
+  html += `<rect width="${TOTAL_W}" height="${TOTAL_H}" fill="#f8fafc"/>`;
+
+  // Axis row bg
+  html += `<rect x="0" y="0" width="${TOTAL_W}" height="${AXIS_H}" fill="#f1f5f9"/>`;
+
+  // Header row bg
+  html += `<rect x="0" y="${AXIS_H}" width="${TOTAL_W}" height="${HEAD_H}" fill="#e2e8f0"/>`;
+
+  // Alternating row bg
+  PHASES.forEach((p, i) => {
+    const ry = AXIS_H + HEAD_H + i * ROW_H;
+    html += `<rect x="0" y="${ry}" width="${TOTAL_W}" height="${ROW_H}" fill="${i % 2 === 0 ? '#ffffff' : '#f8fafc'}"/>`;
+  });
+
+  // ── GRID LINES (vertical day lines in track area) ──
+  // Draw one line per day
+  for (let d = 0; d <= totalDays; d++) {
+    const x = dayToX(d);
+    const isWeekBound = (d % Math.max(1, Math.floor(totalDays / 10)) === 0);
+    html += `<line x1="${x}" y1="${AXIS_H}" x2="${x}" y2="${TOTAL_H}"
+      stroke="${isWeekBound ? '#cbd5e1' : '#e2e8f0'}"
+      stroke-width="${isWeekBound ? 1 : 0.5}"
+      stroke-dasharray="${isWeekBound ? '0' : '3,3'}"/>`;
   }
 
-  const tbody = document.getElementById('ganttRows');
-  tbody.innerHTML = '';
+  // ── DATE AXIS LABELS ──
+  // Show every day label (or every N days if span is large)
+  const labelStep = totalDays <= 14 ? 1 : totalDays <= 30 ? 2 : Math.ceil(totalDays / 12);
+  for (let d = 0; d <= totalDays; d += labelStep) {
+    const x = dayToX(d);
+    const dateD = addDays(base, Math.min(d, totalDays - 1));
+    const label = fmtShort(dateD);
+    html += `<text x="${x}" y="${AXIS_H - 8}" text-anchor="middle"
+      font-size="10" fill="#94a3b8" font-family="'Plus Jakarta Sans',sans-serif">${label}</text>`;
+    // tick mark
+    html += `<line x1="${x}" y1="${AXIS_H - 4}" x2="${x}" y2="${AXIS_H}" stroke="#cbd5e1" stroke-width="1"/>`;
+  }
 
-  PHASES.forEach(p => {
+  // ── HEADER LABELS ──
+  html += `
+    <text x="12" y="${AXIS_H + HEAD_H/2 + 4}" font-size="11" font-weight="600" fill="#475569" font-family="'Plus Jakarta Sans',sans-serif">Fase pekerjaan</text>
+    <text x="${COL_NAME + COL_DUR/2}" y="${AXIS_H + HEAD_H/2 + 4}" text-anchor="middle" font-size="11" font-weight="600" fill="#475569" font-family="'Plus Jakarta Sans',sans-serif">Durasi</text>
+    <text x="${COL_NAME + COL_DUR + TRACK_W/2}" y="${AXIS_H + HEAD_H/2 + 4}" text-anchor="middle" font-size="11" font-weight="600" fill="#94a3b8" font-family="'Plus Jakarta Sans',sans-serif">Timeline</text>
+  `;
+
+  // ── ROW SEPARATORS ──
+  for (let i = 0; i <= PHASES.length; i++) {
+    const y = AXIS_H + HEAD_H + i * ROW_H;
+    html += `<line x1="0" y1="${y}" x2="${TOTAL_W}" y2="${y}" stroke="#e2e8f0" stroke-width="0.5"/>`;
+  }
+
+  // Column separators
+  html += `<line x1="${COL_NAME}" y1="${AXIS_H}" x2="${COL_NAME}" y2="${TOTAL_H}" stroke="#e2e8f0" stroke-width="1"/>`;
+  html += `<line x1="${COL_NAME+COL_DUR}" y1="${AXIS_H}" x2="${COL_NAME+COL_DUR}" y2="${TOTAL_H}" stroke="#e2e8f0" stroke-width="1"/>`;
+
+  // ── BARS & LABELS ──
+  PHASES.forEach((p, i) => {
+    const ry = AXIS_H + HEAD_H + i * ROW_H;
     const sd = addDays(base, p.startOffset);
     const ed = addDays(base, p.startOffset + p.days - 1);
-    const pctL = (p.startOffset / totalDays) * 100;
-    const pctW = Math.max(p.days / totalDays * 100, 3);
 
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="g-name">
-        <div class="g-name-txt">${p.short}</div>
-        <div class="g-name-date">${fmtShort(sd)} – ${fmtShort(ed)}</div>
-      </td>
-      <td class="g-dur">
-        <span class="dur-badge" style="background:${p.color}18;color:${p.color};">${p.days}hr</span>
-      </td>
-      <td class="g-track">
-        <div class="track-bg">
-          <div class="track-bar" style="left:${pctL}%;width:${pctW}%;background:${p.color};">
-            <span class="track-bar-txt" style="color:${p.txt};">${p.days}hr</span>
-          </div>
-        </div>
-      </td>`;
-    tbody.appendChild(tr);
+    // Bar
+    const barX = dayToX(p.startOffset);
+    const barW = Math.max((p.days / totalDays) * TRACK_W, 28);
+    const barY = ry + BAR_Y_OFF;
+
+    html += `<g clip-path="url(#barClip)">`;
+    // track bg inside row
+    html += `<rect x="${COL_NAME+COL_DUR+4}" y="${barY}" width="${TRACK_W-8}" height="${BAR_H}" rx="4" fill="#e2e8f0"/>`;
+    // actual bar
+    html += `<rect x="${barX}" y="${barY}" width="${barW}" height="${BAR_H}" rx="4" fill="${p.color}"/>`;
+    // bar label
+    const barLabelX = barX + barW / 2;
+    html += `<text x="${barLabelX}" y="${barY + BAR_H/2 + 4}" text-anchor="middle"
+      font-size="10" font-weight="600" fill="${p.txt}"
+      font-family="'Plus Jakarta Sans',sans-serif">${p.days}hr</text>`;
+    html += `</g>`;
+
+    // Row name
+    html += `<text x="12" y="${ry + 18}" font-size="12" font-weight="600" fill="#0f172a" font-family="'Plus Jakarta Sans',sans-serif">${p.short}</text>`;
+    html += `<text x="12" y="${ry + 32}" font-size="10" fill="#94a3b8" font-family="'JetBrains Mono',monospace">${fmtShort(sd)} – ${fmtShort(ed)}</text>`;
+
+    // Duration badge
+    const durX = COL_NAME + COL_DUR / 2;
+    html += `<rect x="${durX - 20}" y="${ry + 14}" width="40" height="20" rx="5" fill="${p.color}18"/>`;
+    html += `<text x="${durX}" y="${ry + 28}" text-anchor="middle" font-size="11" font-weight="600" fill="${p.color}"
+      font-family="'JetBrains Mono',monospace">${p.days}hr</text>`;
   });
+
+  // Outer border
+  html += `<rect x="0" y="0" width="${TOTAL_W}" height="${TOTAL_H}" fill="none" stroke="#e2e8f0" stroke-width="1"/>`;
+
+  svg.innerHTML = html;
 }
 
 function updateSummary() {

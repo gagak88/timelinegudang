@@ -345,24 +345,41 @@ const PHASES = [
 ];
 
 function todayStr() {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
 }
 document.getElementById('startDate').value = todayStr();
 
-function addDays(base, n) {
-  const d = new Date(base + 'T00:00:00');
-  d.setDate(d.getDate() + n);
-  return d;
+function addDays(baseStr, n) {
+  const [y, m, d] = baseStr.split('-').map(Number);
+  const dt = new Date(y, m-1, d+n);
+  return dt;
 }
 
+function dateToStr(dt) {
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth()+1).padStart(2,'0');
+  const d = String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+
+const MONTHS_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
 function fmtShort(d) {
-  return d.toLocaleDateString('id-ID', { day:'2-digit', month:'short' });
+  return String(d.getDate()).padStart(2,'0') + ' ' + MONTHS_ID[d.getMonth()];
 }
 function fmtFull(d) {
-  return d.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+  return String(d.getDate()).padStart(2,'0') + ' ' + MONTHS_ID[d.getMonth()] + ' ' + d.getFullYear();
 }
-function diffDays(a, b) {
-  return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000);
+function diffDays(aStr, bStr) {
+  const [ay, am, ad] = aStr.split('-').map(Number);
+  const [by, bm, bd] = bStr.split('-').map(Number);
+  const a = new Date(ay, am-1, ad);
+  const b = new Date(by, bm-1, bd);
+  return Math.round((b - a) / 86400000);
 }
 
 function getSpan() {
@@ -382,8 +399,8 @@ function renderCards() {
   PHASES.forEach(p => {
     const sd = addDays(base, p.startOffset);
     const ed = addDays(base, p.startOffset + p.days - 1);
-    const sdStr = sd.toISOString().split('T')[0];
-    const edStr = ed.toISOString().split('T')[0];
+    const sdStr = dateToStr(sd);
+    const edStr = dateToStr(ed);
 
     const card = document.createElement('div');
     card.className = 'phase-card';
@@ -424,7 +441,7 @@ function renderCards() {
           if (off < 0) { this.value = b; return; }
           PHASES[id].startOffset = off;
           const endInp = card.querySelector(`input[data-id="${id}"][data-type="end"]`);
-          endInp.value = addDays(b, off + PHASES[id].days - 1).toISOString().split('T')[0];
+          endInp.value = dateToStr(addDays(b, off + PHASES[id].days - 1));
         } else {
           const startInp = card.querySelector(`input[data-id="${id}"][data-type="start"]`);
           const off = diffDays(b, startInp.value);
@@ -447,7 +464,7 @@ function renderCards() {
       document.getElementById('dval-' + id).textContent = val + 'hr';
       const b = document.getElementById('startDate').value || todayStr();
       const endInp = card.querySelector(`input[data-id="${id}"][data-type="end"]`);
-      endInp.value = addDays(b, PHASES[id].startOffset + val - 1).toISOString().split('T')[0];
+      endInp.value = dateToStr(addDays(b, PHASES[id].startOffset + val - 1));
       updateAll();
     });
   });

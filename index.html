@@ -476,8 +476,12 @@ function renderGantt() {
   svg.setAttribute('height', TOTAL_H);
   svg.style.minWidth = TOTAL_W + 'px';
 
-  // Helper: x position for a day offset within TRACK area
-  const dayToX = (offset) => COL_NAME + COL_DUR + (offset / totalDays) * TRACK_W;
+  // Helper: x position for LEFT EDGE of day `d` (0-indexed)
+  // Each day occupies TRACK_W/totalDays px
+  const dayW = TRACK_W / totalDays;
+  const dayToX = (offset) => COL_NAME + COL_DUR + offset * dayW;
+  // Center of a day
+  const dayMidX = (offset) => dayToX(offset) + dayW / 2;
 
   let html = '';
 
@@ -487,43 +491,34 @@ function renderGantt() {
   </defs>`;
 
   // ── BACKGROUNDS ──
-  // Full bg
   html += `<rect width="${TOTAL_W}" height="${TOTAL_H}" fill="#f8fafc"/>`;
-
-  // Axis row bg
   html += `<rect x="0" y="0" width="${TOTAL_W}" height="${AXIS_H}" fill="#f1f5f9"/>`;
-
-  // Header row bg
   html += `<rect x="0" y="${AXIS_H}" width="${TOTAL_W}" height="${HEAD_H}" fill="#e2e8f0"/>`;
 
-  // Alternating row bg
   PHASES.forEach((p, i) => {
     const ry = AXIS_H + HEAD_H + i * ROW_H;
     html += `<rect x="0" y="${ry}" width="${TOTAL_W}" height="${ROW_H}" fill="${i % 2 === 0 ? '#ffffff' : '#f8fafc'}"/>`;
   });
 
-  // ── GRID LINES (vertical day lines in track area) ──
-  // Draw one line per day
+  // ── GRID LINES — one vertical line at LEFT EDGE of each day ──
   for (let d = 0; d <= totalDays; d++) {
     const x = dayToX(d);
-    const isWeekBound = (d % Math.max(1, Math.floor(totalDays / 10)) === 0);
+    const major = (d % Math.max(1, Math.round(totalDays / 8)) === 0) || d === totalDays;
     html += `<line x1="${x}" y1="${AXIS_H}" x2="${x}" y2="${TOTAL_H}"
-      stroke="${isWeekBound ? '#cbd5e1' : '#e2e8f0'}"
-      stroke-width="${isWeekBound ? 1 : 0.5}"
-      stroke-dasharray="${isWeekBound ? '0' : '3,3'}"/>`;
+      stroke="${major ? '#cbd5e1' : '#e8edf2'}"
+      stroke-width="${major ? 1 : 0.5}"
+      stroke-dasharray="${major ? '' : '3,3'}"/>`;
   }
 
-  // ── DATE AXIS LABELS ──
-  // Show every day label (or every N days if span is large)
+  // ── DATE AXIS LABELS — centered inside each day cell ──
   const labelStep = totalDays <= 14 ? 1 : totalDays <= 30 ? 2 : Math.ceil(totalDays / 12);
-  for (let d = 0; d <= totalDays; d += labelStep) {
-    const x = dayToX(d);
-    const dateD = addDays(base, Math.min(d, totalDays - 1));
+  for (let d = 0; d < totalDays; d += labelStep) {
+    const cx = dayMidX(d);
+    const dateD = addDays(base, d);
     const label = fmtShort(dateD);
-    html += `<text x="${x}" y="${AXIS_H - 8}" text-anchor="middle"
-      font-size="10" fill="#94a3b8" font-family="'Plus Jakarta Sans',sans-serif">${label}</text>`;
-    // tick mark
-    html += `<line x1="${x}" y1="${AXIS_H - 4}" x2="${x}" y2="${AXIS_H}" stroke="#cbd5e1" stroke-width="1"/>`;
+    html += `<text x="${cx}" y="${AXIS_H - 6}" text-anchor="middle"
+      font-size="10" fill="#64748b" font-family="'Plus Jakarta Sans',sans-serif">${label}</text>`;
+    html += `<line x1="${dayToX(d)}" y1="${AXIS_H - 3}" x2="${dayToX(d)}" y2="${AXIS_H}" stroke="#cbd5e1" stroke-width="1"/>`;
   }
 
   // ── HEADER LABELS ──
@@ -549,9 +544,9 @@ function renderGantt() {
     const sd = addDays(base, p.startOffset);
     const ed = addDays(base, p.startOffset + p.days - 1);
 
-    // Bar
+    // Bar — starts at left edge of startOffset day, ends at right edge of last day
     const barX = dayToX(p.startOffset);
-    const barW = Math.max((p.days / totalDays) * TRACK_W, 28);
+    const barW = Math.max(p.days * dayW, 28);
     const barY = ry + BAR_Y_OFF;
 
     html += `<g clip-path="url(#barClip)">`;

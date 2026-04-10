@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Timeline Perapihan Gudang</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --navy: #0f2340;
+    --navy-mid: #1a3557;
+    --blue: #2563eb;
+    --blue-light: #3b82f6;
+    --teal: #0d9488;
+    --amber: #d97706;
+    --purple: #7c3aed;
+    --green: #16a34a;
+    --surface: #f8fafc;
+    --surface2: #f1f5f9;
+    --border: #e2e8f0;
+    --border2: #cbd5e1;
+    --text: #0f172a;
+    --text2: #475569;
+    --text3: #94a3b8;
+    --white: #ffffff;
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--navy);
+    padding: 28px 32px 24px;
+    border-bottom: 3px solid var(--blue);
+  }
+  .header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .header-left { display: flex; flex-direction: column; gap: 6px; }
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(37,99,235,0.2);
+    border: 1px solid rgba(59,130,246,0.4);
+    color: #93c5fd;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 5px;
+    width: fit-content;
+  }
+  .header-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #60a5fa; }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+  }
+  .header h1 span { color: #60a5fa; }
+  .header-sub { font-size: 13px; color: #94a3b8; }
+  .header-stats {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .hstat {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: var(--radius);
+    padding: 10px 18px;
+    text-align: center;
+    min-width: 110px;
+  }
+  .hstat-lbl { font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
+  .hstat-val { font-size: 20px; font-weight: 700; color: #fff; font-family: 'JetBrains Mono', monospace; }
+  .hstat-val.accent { color: #60a5fa; }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px 48px;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .main { grid-template-columns: 1fr; }
+  }
+
+  /* ── PANEL ── */
+  .panel {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .panel-head {
+    background: var(--navy);
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-head-icon {
+    width: 28px; height: 28px;
+    background: rgba(37,99,235,0.3);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .panel-head h2 { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+
+  /* ── START DATE ── */
+  .start-date-wrap { padding: 16px 18px; border-bottom: 1px solid var(--border); }
+  .start-date-wrap label { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 6px; }
+  .start-date-wrap input[type=date] {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid var(--border2);
+    border-radius: var(--radius);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--surface);
+    cursor: pointer;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .start-date-wrap input[type=date]:focus { border-color: var(--blue); }
+
+  /* ── PHASE CARDS ── */
+  .phases-scroll { padding: 14px; display: flex; flex-direction: column; gap: 10px; max-height: 680px; overflow-y: auto; }
+  .phases-scroll::-webkit-scrollbar { width: 4px; }
+  .phases-scroll::-webkit-scrollbar-track { background: transparent; }
+  .phases-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+  .phase-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 13px;
+    border-left: 3px solid var(--blue);
+    transition: box-shadow .15s;
+  }
+  .phase-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.07); }
+  .phase-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .phase-num {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .phase-title { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.4; flex: 1; }
+  .opt-pill {
+    font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 99px;
+    background: #fef3c7; color: #92400e;
+    border: 1px solid #fde68a;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .phase-dates-row {
+    display: flex; gap: 8px; margin-bottom: 8px;
+  }
+  .date-field { flex: 1; }
+  .date-field label { font-size: 10px; font-weight: 600; color: var(--text3); display: block; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .5px; }
+  .date-field input[type=date] {
+    width: 100%; padding: 6px 8px;
+    border: 1px solid var(--border2);
+    border-radius: 7px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 11px; font-weight: 500; color: var(--text);
+    background: var(--white); outline: none;
+    transition: border-color .15s;
+  }
+  .date-field input[type=date]:focus { border-color: var(--blue); }
+  .dur-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dur-lbl { font-size: 10px; font-weight: 600; color: var(--text3); white-space: nowrap; }
+  .dur-row input[type=range] {
+    flex: 1; -webkit-appearance: none; appearance: none;
+    height: 4px; border-radius: 99px; background: var(--border2); outline: none; cursor: pointer;
+  }
+  .dur-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--blue);
+    border: 2px solid white; box-shadow: 0 0 0 1px var(--blue);
+    cursor: pointer;
+  }
+  .dur-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 500;
+    color: var(--blue); min-width: 36px; text-align: right;
+  }
+  .phase-info {
+    font-size: 10px; color: var(--text3);
+    margin-top: 6px; padding-top: 6px;
+    border-top: 1px dashed var(--border);
+    display: flex; align-items: center; gap: 4px;
+  }
+
+  /* ── GANTT PANEL ── */
+  .gantt-panel { position: sticky; top: 24px; }
+  .gantt-scroll { overflow-x: auto; }
+  .gantt-table { min-width: 500px; width: 100%; border-collapse: collapse; }
+  .gantt-head-row { background: var(--surface2); }
+  .gantt-head-row th {
+    padding: 10px 14px;
+    font-size: 11px; font-weight: 600;
+    color: var(--text2); text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .gantt-head-row th.track-head {
+    text-align: center; font-size: 10px; color: var(--text3);
+    padding: 10px 4px;
+  }
+  .gantt-body tr { border-bottom: 1px solid var(--border); }
+  .gantt-body tr:last-child { border-bottom: none; }
+  .gantt-body tr:hover { background: var(--surface); }
+  .g-name { padding: 10px 14px; min-width: 140px; }
+  .g-name-txt { font-size: 12px; font-weight: 600; color: var(--text); }
+  .g-name-date { font-size: 10px; color: var(--text3); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+  .g-dur { padding: 10px 14px; white-space: nowrap; }
+  .dur-badge {
+    display: inline-flex; align-items: center;
+    font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 5px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .g-track { padding: 8px 8px; }
+  .track-bg { position: relative; height: 28px; border-radius: 6px; background: var(--surface2); }
+  .track-bar {
+    position: absolute; top: 4px; height: 20px;
+    border-radius: 5px; display: flex; align-items: center;
+    padding: 0 8px; min-width: 24px;
+    transition: width .3s ease, left .3s ease;
+  }
+  .track-bar-txt { font-size: 10px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ── DATE AXIS ── */
+  .gantt-axis {
+    display: flex; padding: 0 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .gantt-axis-spacer { min-width: 140px; padding: 6px 14px; flex-shrink: 0; }
+  .gantt-axis-spacer2 { min-width: 80px; padding: 6px 14px; flex-shrink: 0; }
+  .gantt-axis-track { flex: 1; position: relative; height: 30px; }
+  .axis-tick {
+    position: absolute; font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text3); transform: translateX(-50%);
+    top: 8px;
+  }
+  .axis-line {
+    position: absolute; top: 0; bottom: 0;
+    border-left: 1px dashed var(--border2);
+  }
+
+  /* ── LEGEND & FOOTER ── */
+  .bottom-row {
+    max-width: 1100px; margin: 0 auto;
+    padding: 0 24px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 14px;
+  }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+  .legend-sq { width: 12px; height: 12px; border-radius: 3px; }
+  .print-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: var(--radius);
+    background: var(--navy); color: #fff;
+    border: none; font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: background .15s;
+  }
+  .print-btn:hover { background: var(--blue); }
+
+  @media print {
+    .print-btn { display: none; }
+    .phases-scroll { max-height: none; overflow: visible; }
+    .gantt-panel { position: static; }
+    body { background: white; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-left">
+      <span class="header-badge">Project Management</span>
+      <h1>Timeline <span>Perapihan Gudang</span></h1>
+      <p class="header-sub">Atur jadwal dan durasi setiap fase — Gantt chart otomatis terupdate</p>
+    </div>
+    <div class="header-stats">
+      <div class="hstat">
+        <div class="hstat-lbl">Total rentang</div>
+        <div class="hstat-val accent" id="hTotalSpan">—</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-lbl">Total fase</div>
+        <div class="hstat-val">7</div>
+      </div>
+      <div class="hstat">
+        <div class="hstat-lbl">Estimasi selesai</div>
+        <div class="hstat-val accent" id="hEndDate" style="font-size:13px;padding-top:5px;">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT: CONTROLS -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-head-icon">📋</div>
+      <h2>Pengaturan jadwal</h2>
+    </div>
+
+    <div class="start-date-wrap">
+      <label>Tanggal mulai proyek</label>
+      <input type="date" id="startDate" />
+    </div>
+
+    <div class="phases-scroll" id="phasesList"></div>
+  </div>
+
+  <!-- RIGHT: GANTT -->
+  <div class="panel gantt-panel">
+    <div class="panel-head">
+      <div class="panel-head-icon">📊</div>
+      <h2>Gantt chart</h2>
+    </div>
+    <div class="gantt-scroll">
+      <div class="gantt-axis" id="ganttAxis">
+        <div class="gantt-axis-spacer"></div>
+        <div class="gantt-axis-spacer2"></div>
+        <div class="gantt-axis-track" id="axisTrack"></div>
+      </div>
+      <table class="gantt-table">
+        <thead>
+          <tr class="gantt-head-row">
+            <th style="min-width:140px;">Fase pekerjaan</th>
+            <th style="min-width:70px;">Durasi</th>
+            <th class="track-head">Timeline</th>
+          </tr>
+        </thead>
+        <tbody class="gantt-body" id="ganttRows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM -->
+<div class="bottom-row">
+  <div class="legend">
+    <div class="legend-item"><span class="legend-sq" style="background:#0f2340"></span>Fase wajib</div>
+    <div class="legend-item"><span class="legend-sq" style="background:#d97706"></span>Opsional</div>
+    <div class="legend-item"><span class="legend-sq" style="background:#0d9488"></span>Operasional</div>
+    <div class="legend-item"><span class="legend-sq" style="background:#7c3aed"></span>Dokumentasi</div>
+  </div>
+  <button class="print-btn" onclick="window.print()">🖨️ Print / Simpan PDF</button>
+</div>
+
+<script>
+const PHASES = [
+  { id:0, name:'Semua barang wajib di rak',         short:'Barang ke rak',     days:3,  min:1, max:14, opt:false, startOffset:0, color:'#0f2340', txt:'#93c5fd', cat:'wajib' },
+  { id:1, name:'Labeling nama jual / nama Jubelio', short:'Labeling koli',     days:3,  min:1, max:14, opt:false, startOffset:0, color:'#185FA5', txt:'#dbeafe', cat:'wajib' },
+  { id:2, name:'Barcoding & repack',                short:'Barcoding',         days:4,  min:1, max:21, opt:false, startOffset:0, color:'#1a3557', txt:'#bfdbfe', cat:'wajib' },
+  { id:3, name:'Perapihan display & bulk stock',    short:'Display & bulk',    days:3,  min:1, max:14, opt:false, startOffset:0, color:'#0d9488', txt:'#ccfbf1', cat:'operasional' },
+  { id:4, name:'Stock opname',                      short:'Stock opname',      days:2,  min:1, max:10, opt:false, startOffset:0, color:'#0f766e', txt:'#99f6e4', cat:'operasional' },
+  { id:5, name:'Integrasi Jubelio',                 short:'Integrasi Jubelio', days:3,  min:1, max:14, opt:true,  startOffset:0, color:'#d97706', txt:'#fef3c7', cat:'opsional' },
+  { id:6, name:'Pembuatan SOP (in, out, opname)',   short:'Pembuatan SOP',     days:3,  min:1, max:10, opt:false, startOffset:0, color:'#7c3aed', txt:'#ede9fe', cat:'dokumentasi' },
+];
+
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+document.getElementById('startDate').value = todayStr();
+
+function addDays(base, n) {
+  const d = new Date(base + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+function fmtShort(d) {
+  return d.toLocaleDateString('id-ID', { day:'2-digit', month:'short' });
+}
+function fmtFull(d) {
+  return d.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+}
+function diffDays(a, b) {
+  return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000);
+}
+
+function getSpan() {
+  let max = 0;
+  PHASES.forEach(p => {
+    const e = p.startOffset + p.days - 1;
+    if (e > max) max = e;
+  });
+  return max + 1;
+}
+
+function renderCards() {
+  const base = document.getElementById('startDate').value || todayStr();
+  const list = document.getElementById('phasesList');
+  list.innerHTML = '';
+
+  PHASES.forEach(p => {
+    const sd = addDays(base, p.startOffset);
+    const ed = addDays(base, p.startOffset + p.days - 1);
+    const sdStr = sd.toISOString().split('T')[0];
+    const edStr = ed.toISOString().split('T')[0];
+
+    const card = document.createElement('div');
+    card.className = 'phase-card';
+    card.style.borderLeftColor = p.color;
+    card.innerHTML = `
+      <div class="phase-card-top">
+        <div class="phase-num" style="background:${p.color}20;color:${p.color};">${p.id+1}</div>
+        <div class="phase-title">${p.name}</div>
+        ${p.opt ? '<span class="opt-pill">opsional</span>' : ''}
+      </div>
+      <div class="phase-dates-row">
+        <div class="date-field">
+          <label>Mulai</label>
+          <input type="date" data-id="${p.id}" data-type="start" value="${sdStr}" />
+        </div>
+        <div class="date-field">
+          <label>Selesai</label>
+          <input type="date" data-id="${p.id}" data-type="end" value="${edStr}" />
+        </div>
+      </div>
+      <div class="dur-row">
+        <span class="dur-lbl">Durasi</span>
+        <input type="range" min="${p.min}" max="${p.max}" step="1" value="${p.days}" data-id="${p.id}" class="dur-slider" />
+        <span class="dur-val" id="dval-${p.id}">${p.days}hr</span>
+      </div>
+      <div class="phase-info">
+        ${fmtShort(sd)} — ${fmtShort(ed)} &nbsp;·&nbsp; ${p.days} hari kerja
+      </div>`;
+    list.appendChild(card);
+
+    card.querySelectorAll('input[type=date]').forEach(inp => {
+      inp.addEventListener('change', function () {
+        const id = +this.dataset.id;
+        const type = this.dataset.type;
+        const b = document.getElementById('startDate').value || todayStr();
+        if (type === 'start') {
+          const off = diffDays(b, this.value);
+          if (off < 0) { this.value = b; return; }
+          PHASES[id].startOffset = off;
+          const endInp = card.querySelector(`input[data-id="${id}"][data-type="end"]`);
+          endInp.value = addDays(b, off + PHASES[id].days - 1).toISOString().split('T')[0];
+        } else {
+          const startInp = card.querySelector(`input[data-id="${id}"][data-type="start"]`);
+          const off = diffDays(b, startInp.value);
+          const endOff = diffDays(b, this.value);
+          const nd = Math.max(1, endOff - off + 1);
+          PHASES[id].days = nd;
+          PHASES[id].startOffset = off;
+          const sl = card.querySelector(`.dur-slider[data-id="${id}"]`);
+          if (sl) sl.value = Math.min(nd, PHASES[id].max);
+          document.getElementById('dval-' + id).textContent = nd + 'hr';
+        }
+        updateAll();
+      });
+    });
+
+    card.querySelector('.dur-slider').addEventListener('input', function () {
+      const id = +this.dataset.id;
+      const val = +this.value;
+      PHASES[id].days = val;
+      document.getElementById('dval-' + id).textContent = val + 'hr';
+      const b = document.getElementById('startDate').value || todayStr();
+      const endInp = card.querySelector(`input[data-id="${id}"][data-type="end"]`);
+      endInp.value = addDays(b, PHASES[id].startOffset + val - 1).toISOString().split('T')[0];
+      updateAll();
+    });
+  });
+}
+
+function renderGantt() {
+  const base = document.getElementById('startDate').value || todayStr();
+  const totalDays = getSpan();
+
+  // Axis ticks
+  const axisTrack = document.getElementById('axisTrack');
+  axisTrack.innerHTML = '';
+  axisTrack.style.position = 'relative';
+  axisTrack.style.height = '30px';
+  const step = Math.max(1, Math.ceil(totalDays / 7));
+  for (let i = 0; i <= totalDays; i += step) {
+    const pct = (i / totalDays) * 100;
+    const line = document.createElement('div');
+    line.className = 'axis-line';
+    line.style.left = pct + '%';
+    axisTrack.appendChild(line);
+    const lbl = document.createElement('div');
+    lbl.className = 'axis-tick';
+    lbl.style.left = pct + '%';
+    lbl.textContent = fmtShort(addDays(base, Math.min(i, totalDays - 1)));
+    axisTrack.appendChild(lbl);
+  }
+
+  const tbody = document.getElementById('ganttRows');
+  tbody.innerHTML = '';
+
+  PHASES.forEach(p => {
+    const sd = addDays(base, p.startOffset);
+    const ed = addDays(base, p.startOffset + p.days - 1);
+    const pctL = (p.startOffset / totalDays) * 100;
+    const pctW = Math.max(p.days / totalDays * 100, 3);
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="g-name">
+        <div class="g-name-txt">${p.short}</div>
+        <div class="g-name-date">${fmtShort(sd)} – ${fmtShort(ed)}</div>
+      </td>
+      <td class="g-dur">
+        <span class="dur-badge" style="background:${p.color}18;color:${p.color};">${p.days}hr</span>
+      </td>
+      <td class="g-track">
+        <div class="track-bg">
+          <div class="track-bar" style="left:${pctL}%;width:${pctW}%;background:${p.color};">
+            <span class="track-bar-txt" style="color:${p.txt};">${p.days}hr</span>
+          </div>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateSummary() {
+  const base = document.getElementById('startDate').value || todayStr();
+  const span = getSpan();
+  const endD = addDays(base, span - 1);
+  document.getElementById('hTotalSpan').textContent = span + ' hari';
+  document.getElementById('hEndDate').textContent = fmtFull(endD);
+}
+
+function updateAll() {
+  renderCards();
+  renderGantt();
+  updateSummary();
+}
+
+document.getElementById('startDate').addEventListener('change', updateAll);
+updateAll();
+</script>
+</body>
+</html>

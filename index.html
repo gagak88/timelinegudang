@@ -315,7 +315,14 @@
     <div class="legend-item"><span class="legend-sq" style="background:#0d9488"></span>Operasional</div>
     <div class="legend-item"><span class="legend-sq" style="background:#7c3aed"></span>Dokumentasi</div>
   </div>
-  <span style="font-size:12px;color:#94a3b8;">✓ Pengaturan tersimpan otomatis</span>
+  <button id="copyLinkBtn" onclick="copyLink()" style="
+    display:flex;align-items:center;gap:7px;
+    padding:9px 18px;border-radius:10px;
+    background:#0f2340;color:#fff;
+    border:none;font-family:'Plus Jakarta Sans',sans-serif;
+    font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;">
+    🔗 Copy link untuk share
+  </button>
 </div>
 
 <script>
@@ -588,45 +595,85 @@ function updateSummary() {
   document.getElementById('hEndDate').textContent = fmtFull(endD);
 }
 
-function saveState() {
+function encodeState() {
   const base = document.getElementById('startDate').value || todayStr();
-  const state = {
-    startDate: base,
-    phases: PHASES.map(p => ({ id: p.id, days: p.days, startOffset: p.startOffset }))
-  };
-  localStorage.setItem('gudang_timeline', JSON.stringify(state));
+  const phaseData = PHASES.map(p => p.days + ',' + p.startOffset).join(';');
+  return btoa(base + '|' + phaseData);
 }
 
-function loadState() {
+function decodeState(encoded) {
   try {
-    const raw = localStorage.getItem('gudang_timeline');
-    if (!raw) return;
-    const state = JSON.parse(raw);
-    if (state.startDate) {
-      document.getElementById('startDate').value = state.startDate;
-    }
-    if (state.phases) {
-      state.phases.forEach(saved => {
-        const p = PHASES.find(x => x.id === saved.id);
-        if (p) {
-          p.days = saved.days;
-          p.startOffset = saved.startOffset;
-        }
-      });
-    }
+    const raw = atob(encoded);
+    const [startDate, phaseStr] = raw.split('|');
+    document.getElementById('startDate').value = startDate;
+    phaseStr.split(';').forEach((chunk, i) => {
+      const [days, offset] = chunk.split(',').map(Number);
+      if (PHASES[i]) {
+        PHASES[i].days = days;
+        PHASES[i].startOffset = offset;
+      }
+    });
   } catch(e) {}
+}
+
+function loadFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const s = params.get('s');
+  if (s) {
+    decodeState(s);
+  } else {
+    // fallback: load from localStorage for own session
+    try {
+      const raw = localStorage.getItem('gudang_timeline');
+      if (raw) {
+        const state = JSON.parse(raw);
+        if (state.startDate) document.getElementById('startDate').value = state.startDate;
+        if (state.phases) state.phases.forEach(saved => {
+          const p = PHASES.find(x => x.id === saved.id);
+          if (p) { p.days = saved.days; p.startOffset = saved.startOffset; }
+        });
+      }
+    } catch(e) {}
+  }
+}
+
+function saveToLocal() {
+  try {
+    const base = document.getElementById('startDate').value || todayStr();
+    const state = {
+      startDate: base,
+      phases: PHASES.map(p => ({ id: p.id, days: p.days, startOffset: p.startOffset }))
+    };
+    localStorage.setItem('gudang_timeline', JSON.stringify(state));
+  } catch(e) {}
+}
+
+function copyLink() {
+  const encoded = encodeState();
+  const url = window.location.origin + window.location.pathname + '?s=' + encoded;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('copyLinkBtn');
+    btn.textContent = '✓ Link berhasil dicopy!';
+    btn.style.background = '#16a34a';
+    setTimeout(() => {
+      btn.innerHTML = '🔗 Copy link untuk share';
+      btn.style.background = '#0f2340';
+    }, 2500);
+  }).catch(() => {
+    prompt('Copy link ini:', window.location.origin + window.location.pathname + '?s=' + encoded);
+  });
 }
 
 function updateAll() {
   renderCards();
   renderGantt();
   updateSummary();
-  saveState();
+  saveToLocal();
 }
 
 document.getElementById('startDate').addEventListener('change', updateAll);
 window.addEventListener('resize', renderGantt);
-loadState();
+loadFromURL();
 updateAll();
 </script>
 </body>

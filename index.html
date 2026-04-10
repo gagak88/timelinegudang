@@ -43,7 +43,7 @@
     border-bottom: 3px solid var(--blue);
   }
   .header-inner {
-    max-width: 1100px;
+    max-width: 1200px;
     margin: 0 auto;
     display: flex;
     align-items: flex-start;
@@ -95,16 +95,19 @@
 
   /* ── MAIN LAYOUT ── */
   .main {
-    max-width: 1100px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 28px 24px 48px;
-    display: grid;
-    grid-template-columns: 340px 1fr;
-    gap: 24px;
-    align-items: start;
+    padding: 28px 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
   }
-  @media (max-width: 860px) {
-    .main { grid-template-columns: 1fr; }
+  .gantt-full { width: 100%; }
+  .settings-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    align-items: start;
   }
 
   /* ── PANEL ── */
@@ -150,7 +153,8 @@
   .start-date-wrap input[type=date]:focus { border-color: var(--blue); }
 
   /* ── PHASE CARDS ── */
-  .phases-scroll { padding: 14px; display: flex; flex-direction: column; gap: 10px; max-height: 680px; overflow-y: auto; }
+  .phases-scroll { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .settings-row { padding: 14px; gap: 12px; }
   .phases-scroll::-webkit-scrollbar { width: 4px; }
   .phases-scroll::-webkit-scrollbar-track { background: transparent; }
   .phases-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
@@ -159,7 +163,7 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 12px 13px;
+    padding: 10px 12px;
     border-left: 3px solid var(--blue);
     transition: box-shadow .15s;
   }
@@ -236,7 +240,7 @@
 
   /* ── LEGEND & FOOTER ── */
   .bottom-row {
-    max-width: 1100px; margin: 0 auto;
+    max-width: 1200px; margin: 0 auto;
     padding: 0 24px 32px;
     display: flex; align-items: center; justify-content: space-between;
     flex-wrap: wrap; gap: 14px;
@@ -292,23 +296,8 @@
 <!-- MAIN -->
 <div class="main">
 
-  <!-- LEFT: CONTROLS -->
-  <div class="panel">
-    <div class="panel-head">
-      <div class="panel-head-icon">📋</div>
-      <h2>Pengaturan jadwal</h2>
-    </div>
-
-    <div class="start-date-wrap">
-      <label>Tanggal mulai proyek</label>
-      <input type="date" id="startDate" />
-    </div>
-
-    <div class="phases-scroll" id="phasesList"></div>
-  </div>
-
-  <!-- RIGHT: GANTT -->
-  <div class="panel gantt-panel">
+  <!-- TOP: GANTT full width -->
+  <div class="panel gantt-full">
     <div class="panel-head">
       <div class="panel-head-icon">📊</div>
       <h2>Gantt chart</h2>
@@ -317,6 +306,20 @@
       <svg id="ganttSvg"></svg>
     </div>
   </div>
+
+  <!-- BOTTOM: SETTINGS -->
+  <div class="panel" style="overflow:visible;">
+    <div class="panel-head">
+      <div class="panel-head-icon">📋</div>
+      <h2>Pengaturan jadwal</h2>
+    </div>
+    <div class="start-date-wrap">
+      <label>Tanggal mulai proyek</label>
+      <input type="date" id="startDate" />
+    </div>
+    <div class="settings-row" id="phasesList"></div>
+  </div>
+
 </div>
 
 <!-- BOTTOM -->
@@ -454,11 +457,11 @@ function renderGantt() {
   const base = document.getElementById('startDate').value || todayStr();
   const totalDays = getSpan();
   const svg = document.getElementById('ganttSvg');
-
   // Layout constants
-  const COL_NAME = 160;   // px: fase label column
-  const COL_DUR  = 64;    // px: durasi column
-  const TRACK_W  = 480;   // px: timeline track width (fixed, scroll if needed)
+  const COL_NAME = 160;
+  const COL_DUR  = 64;
+  const containerW = svg.parentElement.clientWidth || 900;
+  const TRACK_W  = Math.max(500, containerW - COL_NAME - COL_DUR - 2);
   const ROW_H    = 48;    // px per row
   const HEAD_H   = 36;    // px header row
   const AXIS_H   = 30;    // px date axis row
@@ -595,6 +598,7 @@ function updateAll() {
 }
 
 document.getElementById('startDate').addEventListener('change', updateAll);
+window.addEventListener('resize', renderGantt);
 updateAll();
 </script>
 </body>
